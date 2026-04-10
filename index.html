@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>NASA Lunar Game Engine</title>
+  <title>Unified NASA Space System</title>
 
   <style>
     body { margin:0; overflow:hidden; background:black; font-family:Arial; }
 
-    #ui{
+    #title{
       position:absolute;
+      top:10px;
       width:100%;
-      height:100%;
+      text-align:center;
       color:white;
-      pointer-events:none;
+      font-size:24px;
+      z-index:10;
     }
 
     #panel{
@@ -20,16 +22,23 @@
       top:20px;
       background:rgba(0,0,0,0.7);
       padding:12px;
+      color:white;
       width:280px;
       border-radius:10px;
+      z-index:10;
     }
 
-    #ai{
+    #menu{
       position:absolute;
-      bottom:20px;
-      left:20px;
-      width:300px;
-      background:rgba(0,0,0,0.7);
+      right:20px;
+      top:20px;
+      z-index:10;
+      color:white;
+    }
+
+    #dropdown{
+      display:none;
+      background:rgba(0,0,0,0.8);
       padding:10px;
       border-radius:10px;
     }
@@ -43,186 +52,203 @@
       background:white;
       border-radius:50%;
       transform:translate(-50%,-50%);
+      display:none;
     }
   </style>
 </head>
 
 <body>
 
-<div id="ui">
-  <div id="panel">
-    <div id="mode">Mode: EARTH</div>
-    <div id="mission">Mission: None</div>
-    <div id="status">Status: Idle</div>
-  </div>
+<div id="title">🚀 NASA Unified Space System</div>
 
-  <div id="ai">
-    🤖 AI: Initializing...
-    <div id="chat"></div>
-  </div>
-
-  <div id="crosshair"></div>
+<div id="panel">
+  <div id="mode">Mode: EARTH</div>
+  <div id="info">Click Earth</div>
+  <div id="mission">Mission: None</div>
 </div>
+
+<div id="menu">
+  <button onclick="toggleMenu()">☰ System</button>
+  <div id="dropdown">
+    <p onclick="selectLayer('flood')">🌊 Flood</p>
+    <p onclick="selectLayer('heat')">🔥 Heat</p>
+    <p onclick="selectLayer('quake')">🌎 Quake</p>
+    <p onclick="switchToMoon()">🌕 Enter Moon</p>
+    <p onclick="switchToEarth()">🌍 Return Earth</p>
+  </div>
+</div>
+
+<div id="crosshair"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-// ================= STATE ENGINE =================
-let state = {
-  mode: "earth",
-  mission: null,
-  aliens: [],
-  kills: 0,
-  roomCode: null,
-  players: []
-};
+// ================= STATE =================
+let mode="earth";
 
 // ================= SCENE =================
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
-camera.position.set(0,1,3);
+const scene=new THREE.Scene();
 
-const renderer = new THREE.WebGLRenderer({antialias:true});
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+camera.position.set(0,0,3);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // LIGHT
 scene.add(new THREE.DirectionalLight(0xffffff,1.5).position.set(5,5,5));
 
+// ================= EARTH =================
+const loader=new THREE.TextureLoader();
+
+const earth=new THREE.Mesh(
+  new THREE.SphereGeometry(1,128,128),
+  new THREE.MeshStandardMaterial({
+    map:loader.load("https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg")
+  })
+);
+scene.add(earth);
+
+// CLOUDS
+const clouds=new THREE.Mesh(
+  new THREE.SphereGeometry(1.01,128,128),
+  new THREE.MeshStandardMaterial({
+    map:loader.load("https://threejs.org/examples/textures/planets/earth_clouds_1024.png"),
+    transparent:true
+  })
+);
+scene.add(clouds);
+
+// ================= LAYERS =================
+function makeLayer(color){
+  const mesh=new THREE.Mesh(
+    new THREE.SphereGeometry(1.02,128,128),
+    new THREE.MeshBasicMaterial({
+      color:color,
+      transparent:true,
+      opacity:0.15,
+      blending:THREE.AdditiveBlending
+    })
+  );
+  mesh.visible=false;
+  scene.add(mesh);
+  return mesh;
+}
+
+const flood=makeLayer(0x00aaff);
+const heat=makeLayer(0xff3300);
+const quake=makeLayer(0xc49a6c);
+
 // ================= MOON =================
-const moon = new THREE.Mesh(
-  new THREE.SphereGeometry(5,128,128),
+const moon=new THREE.Mesh(
+  new THREE.SphereGeometry(3,128,128),
   new THREE.MeshStandardMaterial({color:0x888888})
 );
+moon.visible=false;
 scene.add(moon);
 
 // ================= SHIPS =================
-const apollo = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),new THREE.MeshStandardMaterial({color:0x999999}));
-apollo.position.set(1,0.5,1);
-scene.add(apollo);
+const apollo=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshStandardMaterial({color:0x999999}));
+const shuttle=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.8,8),new THREE.MeshStandardMaterial({color:0x00aaff}));
+const orion=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,16),new THREE.MeshStandardMaterial({color:0xff3300}));
 
-const shuttle = new THREE.Mesh(new THREE.ConeGeometry(0.4,1,8),new THREE.MeshStandardMaterial({color:0x00aaff}));
-shuttle.position.set(-1,0.5,0);
-scene.add(shuttle);
+apollo.visible=shuttle.visible=orion.visible=false;
 
-const orion = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16),new THREE.MeshStandardMaterial({color:0xff3300}));
-orion.position.set(0,0.5,-2);
-scene.add(orion);
+scene.add(apollo,shuttle,orion);
 
-// ================= AI SYSTEM =================
-function AI(msg){
-  const chat = document.getElementById("chat");
-  chat.innerHTML += "<p>"+msg+"</p>";
+// ================= MENU =================
+function toggleMenu(){
+  const d=document.getElementById("dropdown");
+  d.style.display=d.style.display==="block"?"none":"block";
 }
 
-// ================= GAME LOGIC =================
-function setMission(m){
-  state.mission = m;
-  document.getElementById("mission").innerText = "Mission: "+m;
+// ================= MODE SWITCH =================
+function switchToMoon(){
+  mode="moon";
 
-  if(m==="ORION"){
-    spawnAliens();
-    AI("Survive! Eliminate all alien threats.");
-  }
+  earth.visible=false;
+  clouds.visible=false;
 
-  if(m==="SHUTTLE"){
-    state.roomCode = Math.floor(Math.random()*90000+10000);
-    state.players = ["You","PlayerA","PlayerB"];
-    AI("Multiplayer room created: "+state.roomCode);
-  }
+  flood.visible=heat.visible=quake.visible=false;
 
-  if(m==="APOLLO"){
-    AI("Take Earth photos. Educational mode enabled.");
-  }
+  moon.visible=true;
+  apollo.visible=shuttle.visible=orion.visible=true;
+
+  apollo.position.set(1,0,0);
+  shuttle.position.set(-1,0,0);
+  orion.position.set(0,0,-1);
+
+  document.getElementById("mode").innerText="Mode: MOON FPS";
+  document.getElementById("crosshair").style.display="block";
 }
 
-// ================= ALIENS =================
-function spawnAliens(){
-  state.aliens = [];
+function switchToEarth(){
+  mode="earth";
 
-  for(let i=0;i<5;i++){
-    const alien = new THREE.Mesh(
-      new THREE.SphereGeometry(0.2,8,8),
-      new THREE.MeshBasicMaterial({color:0x00ff00})
-    );
+  earth.visible=true;
+  clouds.visible=true;
 
-    alien.position.set(
-      (Math.random()-0.5)*5,
-      0.5,
-      (Math.random()-0.5)*5
-    );
+  moon.visible=false;
+  apollo.visible=shuttle.visible=orion.visible=false;
 
-    scene.add(alien);
-    state.aliens.push(alien);
-  }
+  document.getElementById("mode").innerText="Mode: EARTH";
+  document.getElementById("crosshair").style.display="none";
 }
 
-// click kill system
-document.addEventListener("click",()=>{
-  if(state.mission==="ORION"){
-    raycaster.setFromCamera(mouse,camera);
-    const hits = raycaster.intersectObjects(state.aliens);
+// ================= LAYERS =================
+function selectLayer(t){
+  flood.visible=heat.visible=quake.visible=false;
 
-    if(hits.length>0){
-      const alien = hits[0].object;
-      scene.remove(alien);
-      state.aliens = state.aliens.filter(a=>a!==alien);
-      state.kills++;
+  if(t==="flood") flood.visible=true;
+  if(t==="heat") heat.visible=true;
+  if(t==="quake") quake.visible=true;
+}
 
-      AI("Alien eliminated. Total: "+state.kills);
+// ================= RAYCAST =================
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
 
-      if(state.aliens.length===0){
-        AI("MISSION COMPLETE ✔");
+window.addEventListener("mousemove",(e)=>{
+  mouse.x=(e.clientX/innerWidth)*2-1;
+  mouse.y=-(e.clientY/innerHeight)*2+1;
+});
+
+// ================= CLICK =================
+window.addEventListener("click",()=>{
+  raycaster.setFromCamera(mouse,camera);
+
+  if(mode==="earth"){
+    const hit=raycaster.intersectObject(earth);
+    if(hit.length){
+      document.getElementById("info").innerText="Earth Region Scanned";
+    }
+  }
+
+  if(mode==="moon"){
+    const hit=raycaster.intersectObjects([apollo,shuttle,orion]);
+
+    if(hit.length){
+      if(hit[0].object===apollo){
+        document.getElementById("mission").innerText="Apollo: Exploration Mode";
+      }
+      if(hit[0].object===shuttle){
+        document.getElementById("mission").innerText="Shuttle: Multiplayer Lobby";
+      }
+      if(hit[0].object===orion){
+        document.getElementById("mission").innerText="Orion: Alien Survival Mode";
       }
     }
   }
-
-  // ship selection
-  raycaster.setFromCamera(mouse,camera);
-  const hit = raycaster.intersectObjects([apollo,shuttle,orion]);
-
-  if(hit.length>0){
-    if(hit[0].object===apollo){
-      setMission("APOLLO");
-    }
-    if(hit[0].object===shuttle){
-      setMission("SHUTTLE");
-    }
-    if(hit[0].object===orion){
-      setMission("ORION");
-    }
-  }
 });
-
-// ================= FPS MOVEMENT =================
-let keys={};
-document.addEventListener("keydown",e=>keys[e.key]=true);
-document.addEventListener("keyup",e=>keys[e.key]=false);
-
-let yaw=0,pitch=0;
-document.addEventListener("mousemove",(e)=>{
-  yaw -= e.movementX*0.002;
-  pitch -= e.movementY*0.002;
-  pitch=Math.max(-1.2,Math.min(1.2,pitch));
-});
-
-function move(){
-  const speed=0.05;
-
-  if(keys["w"]) camera.position.z -= Math.cos(yaw)*speed;
-  if(keys["s"]) camera.position.z += Math.cos(yaw)*speed;
-  if(keys["a"]) camera.position.x -= Math.sin(yaw)*speed;
-  if(keys["d"]) camera.position.x += Math.sin(yaw)*speed;
-
-  camera.rotation.y=yaw;
-  camera.rotation.x=pitch;
-}
 
 // ================= LOOP =================
 function animate(){
   requestAnimationFrame(animate);
 
-  move();
+  earth.rotation.y+=0.002;
+  clouds.rotation.y+=0.0025;
+  moon.rotation.y+=0.001;
 
   renderer.render(scene,camera);
 }
