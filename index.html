@@ -1,89 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Earth</title>
+  <title>Lunar Drift</title>
 
   <style>
-    body { margin:0; overflow:hidden; background:black; }
+    body { margin:0; overflow:hidden; background:black; font-family:Arial; }
 
-    /* TOP TITLE */
     #title {
-      position: absolute;
-      top: 10px;
-      width: 100%;
-      text-align: center;
-      color: white;
-      font-size: 28px;
-      font-family: Arial;
-      letter-spacing: 2px;
+      position:absolute;
+      top:10px;
+      width:100%;
+      text-align:center;
+      color:white;
+      font-size:28px;
     }
 
-    /* MENU */
     #menu {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      color: white;
-      font-family: Arial;
+      position:absolute;
+      top:20px;
+      right:20px;
+      color:white;
     }
 
     #dropdown {
-      display: none;
-      background: rgba(0,0,0,0.8);
-      padding: 10px;
-      border-radius: 10px;
+      display:none;
+      background:rgba(0,0,0,0.8);
+      padding:10px;
+      border-radius:10px;
     }
 
-    #dropdown p {
-      cursor: pointer;
-      margin: 5px 0;
-    }
+    #dropdown p { cursor:pointer; margin:5px 0; }
 
-    /* LAYERS PANEL */
     #layersPanel {
-      display: none;
-      position: absolute;
-      top: 100px;
-      right: 20px;
-      background: rgba(0,0,0,0.85);
-      padding: 12px;
-      border-radius: 10px;
-      color: white;
-      font-family: Arial;
-      width: 220px;
+      display:none;
+      position:absolute;
+      top:100px;
+      right:20px;
+      background:rgba(0,0,0,0.85);
+      padding:12px;
+      border-radius:10px;
+      width:220px;
+      color:white;
     }
 
-    #layersPanel p {
-      margin: 6px 0;
-      cursor: pointer;
+    #tooltip {
+      position:absolute;
+      background:rgba(0,0,0,0.7);
+      color:white;
+      padding:5px;
+      border-radius:5px;
+      display:none;
     }
 
+    #dataPanel {
+      position:absolute;
+      left:20px;
+      top:20px;
+      background:rgba(0,0,0,0.8);
+      padding:12px;
+      border-radius:10px;
+      color:white;
+      width:200px;
+    }
   </style>
-
 </head>
 
 <body>
 
-<!-- TITLE -->
 <div id="title">🌕 Lunar Drift</div>
 
-<!-- MENU -->
 <div id="menu">
   <button onclick="toggleMenu()">☰ Data</button>
-
   <div id="dropdown">
     <p onclick="selectData('flood')">Flood</p>
-    <p onclick="selectData('global warming')">Global Warming</p>
-    <p onclick="selectData('climate')">Climate</p>
     <p onclick="selectData('heatwaves')">Heatwaves</p>
-
-    <!-- NEW BUTTON -->
     <hr>
     <p onclick="toggleLayers()">🧱 Layers</p>
   </div>
 </div>
 
-<!-- LAYERS PANEL -->
 <div id="layersPanel">
   <p onclick="showLayer('crust')">Crust</p>
   <p onclick="showLayer('mantle')">Mantle</p>
@@ -91,164 +86,152 @@
   <p onclick="showLayer('inner core')">Inner Core</p>
 </div>
 
+<div id="tooltip"></div>
+
+<div id="dataPanel">
+  <h3>🌍 Region Data</h3>
+  <p id="temp">Temp: --</p>
+  <p id="risk">Risk: --</p>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-// SCENE
+// BASIC SETUP
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
-
-// CAMERA
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
+const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
 camera.position.z = 3;
 
-// RENDERER
 const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// LIGHT
-const light = new THREE.PointLight(0xffffff, 2);
-light.position.set(5, 3, 5);
+const light = new THREE.PointLight(0xffffff,2);
+light.position.set(5,3,5);
 scene.add(light);
 
-// TEXTURE LOADER
 const loader = new THREE.TextureLoader();
-
-// EARTH TEXTURE
-const earthTexture = loader.load(
-  'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
-);
 
 // EARTH
 const earth = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 64, 64),
-  new THREE.MeshStandardMaterial({ map: earthTexture })
+  new THREE.SphereGeometry(1,64,64),
+  new THREE.MeshStandardMaterial({
+    map: loader.load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg')
+  })
 );
 scene.add(earth);
 
 // CLOUDS
-const cloudTexture = loader.load(
-  'https://threejs.org/examples/textures/planets/earth_clouds_1024.png'
-);
-
 const clouds = new THREE.Mesh(
-  new THREE.SphereGeometry(1.01, 64, 64),
+  new THREE.SphereGeometry(1.01,64,64),
   new THREE.MeshStandardMaterial({
-    map: cloudTexture,
-    transparent: true
+    map: loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
+    transparent:true
   })
 );
 scene.add(clouds);
 
-// GLOW
-const glow = new THREE.Mesh(
-  new THREE.SphereGeometry(1.1, 64, 64),
-  new THREE.MeshBasicMaterial({
-    color: 0x00aaff,
-    transparent: true,
-    opacity: 0.2
-  })
-);
-scene.add(glow);
-
-// 🌊 FLOOD LAYER
+// FLOOD
 const floodLayer = new THREE.Mesh(
-  new THREE.SphereGeometry(1.05, 64, 64),
-  new THREE.MeshBasicMaterial({
-    color: 0x00ccff,
-    transparent: true,
-    opacity: 0.3
-  })
+  new THREE.SphereGeometry(1.05,64,64),
+  new THREE.MeshBasicMaterial({color:0x00ccff,transparent:true,opacity:0.3})
 );
-floodLayer.visible = false;
+floodLayer.visible=false;
 scene.add(floodLayer);
 
-// 🔥 HEAT LAYER
+// HEAT
 const heatLayer = new THREE.Mesh(
-  new THREE.SphereGeometry(1.05, 64, 64),
-  new THREE.MeshBasicMaterial({
-    color: 0xff6600,
-    transparent: true,
-    opacity: 0.3
-  })
+  new THREE.SphereGeometry(1.05,64,64),
+  new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.3})
 );
-heatLayer.visible = false;
+heatLayer.visible=false;
 scene.add(heatLayer);
 
-// 🧱 EARTH INTERNAL LAYERS
-const crust = new THREE.Mesh(
-  new THREE.SphereGeometry(1.02, 64, 64),
-  new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
-);
-const mantle = new THREE.Mesh(
-  new THREE.SphereGeometry(0.85, 64, 64),
-  new THREE.MeshBasicMaterial({ color: 0xff9933, wireframe: true })
-);
-const outerCore = new THREE.Mesh(
-  new THREE.SphereGeometry(0.6, 64, 64),
-  new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true })
-);
-const innerCore = new THREE.Mesh(
-  new THREE.SphereGeometry(0.3, 64, 64),
-  new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
-);
+// RAYCASTER (CLICK + HOVER)
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
 
-crust.visible = false;
-mantle.visible = false;
-outerCore.visible = false;
-innerCore.visible = false;
+window.addEventListener("mousemove",(e)=>{
+  mouse.x = (e.clientX/innerWidth)*2-1;
+  mouse.y = -(e.clientY/innerHeight)*2+1;
 
-scene.add(crust, mantle, outerCore, innerCore);
+  raycaster.setFromCamera(mouse,camera);
+  const intersects = raycaster.intersectObject(earth);
 
-// MENU FUNCTIONS
-function toggleMenu() {
-  const menu = document.getElementById("dropdown");
-  menu.style.display = menu.style.display === "block" ? "none" : "block";
+  const tooltip = document.getElementById("tooltip");
+
+  if(intersects.length>0){
+    tooltip.style.display="block";
+    tooltip.style.left = e.clientX+"px";
+    tooltip.style.top = e.clientY+"px";
+    tooltip.innerHTML="🌍 Earth Surface";
+  } else {
+    tooltip.style.display="none";
+  }
+});
+
+// CLICK → ZOOM + DATA
+window.addEventListener("click",()=>{
+  raycaster.setFromCamera(mouse,camera);
+  const intersects = raycaster.intersectObject(earth);
+
+  if(intersects.length>0){
+    zoomToEarth();
+    showFakeData();
+  }
+});
+
+// CAMERA ZOOM
+function zoomToEarth(){
+  let target = 1.5;
+  let interval = setInterval(()=>{
+    camera.position.z -= 0.05;
+    if(camera.position.z <= target) clearInterval(interval);
+  },16);
 }
 
-function toggleLayers() {
-  const panel = document.getElementById("layersPanel");
-  panel.style.display = panel.style.display === "block" ? "none" : "block";
+// FAKE DATA
+function showFakeData(){
+  document.getElementById("temp").innerText = "Temp: " + (30+Math.random()*10).toFixed(1)+"°C";
+  document.getElementById("risk").innerText = "Risk: " + ["Low","Medium","High"][Math.floor(Math.random()*3)];
 }
 
-// DATA SELECT
-function selectData(type) {
-  floodLayer.visible = false;
-  heatLayer.visible = false;
-
-  if (type === "flood") floodLayer.visible = true;
-  if (type === "heatwaves") heatLayer.visible = true;
-
-  alert("Showing data for: " + type);
+// MENU
+function toggleMenu(){
+  const m = document.getElementById("dropdown");
+  m.style.display = m.style.display==="block"?"none":"block";
 }
 
-// LAYER SELECT
-function showLayer(type) {
-  crust.visible = false;
-  mantle.visible = false;
-  outerCore.visible = false;
-  innerCore.visible = false;
+function toggleLayers(){
+  const p = document.getElementById("layersPanel");
+  p.style.display = p.style.display==="block"?"none":"block";
+}
 
-  if (type === "crust") crust.visible = true;
-  if (type === "mantle") mantle.visible = true;
-  if (type === "outer core") outerCore.visible = true;
-  if (type === "inner core") innerCore.visible = true;
+function selectData(type){
+  floodLayer.visible=false;
+  heatLayer.visible=false;
+
+  if(type==="flood") floodLayer.visible=true;
+  if(type==="heatwaves") heatLayer.visible=true;
 }
 
 // ANIMATION
-function animate() {
+function animate(){
   requestAnimationFrame(animate);
 
   earth.rotation.y += 0.002;
   clouds.rotation.y += 0.0025;
 
-  renderer.render(scene, camera);
+  // animate layers
+  if(floodLayer.visible){
+    floodLayer.material.opacity = 0.2 + Math.sin(Date.now()*0.003)*0.1;
+  }
+
+  if(heatLayer.visible){
+    heatLayer.material.opacity = 0.2 + Math.sin(Date.now()*0.005)*0.15;
+  }
+
+  renderer.render(scene,camera);
 }
 
 animate();
