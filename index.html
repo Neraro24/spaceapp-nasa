@@ -1,43 +1,25 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-<script>
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// 🌍 LOAD EARTH TEXTURE
+// texture
 const textureLoader = new THREE.TextureLoader();
 const earthTexture = textureLoader.load(
   'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
 );
 
-// 🌍 CREATE EARTH
-const geometry = new THREE.SphereGeometry(1, 64, 64);
+// material
 const material = new THREE.MeshStandardMaterial({
   map: earthTexture
 });
 
+// geometry + mesh (YOU MISSED THIS)
+const geometry = new THREE.SphereGeometry(1, 64, 64);
 const earth = new THREE.Mesh(geometry, material);
 scene.add(earth);
 
-// 💡 LIGHT
+// light
 const light = new THREE.PointLight(0xffffff, 2);
 light.position.set(5, 3, 5);
 scene.add(light);
 
-// 🎥 CAMERA
-camera.position.z = 3;
-
-// 🔄 ANIMATION
+// animation
 function animate() {
   requestAnimationFrame(animate);
 
@@ -45,6 +27,3 @@ function animate() {
 
   renderer.render(scene, camera);
 }
-
-animate();
-</script>
