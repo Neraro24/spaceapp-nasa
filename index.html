@@ -4,6 +4,21 @@
   <title>Earth</title>
 
   <style>
+    body { margin:0; overflow:hidden; background:black; }
+
+    /* TOP TITLE */
+    #title {
+      position: absolute;
+      top: 10px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 28px;
+      font-family: Arial;
+      letter-spacing: 2px;
+    }
+
+    /* MENU */
     #menu {
       position: absolute;
       top: 20px;
@@ -23,13 +38,36 @@
       cursor: pointer;
       margin: 5px 0;
     }
+
+    /* LAYERS PANEL */
+    #layersPanel {
+      display: none;
+      position: absolute;
+      top: 100px;
+      right: 20px;
+      background: rgba(0,0,0,0.85);
+      padding: 12px;
+      border-radius: 10px;
+      color: white;
+      font-family: Arial;
+      width: 220px;
+    }
+
+    #layersPanel p {
+      margin: 6px 0;
+      cursor: pointer;
+    }
+
   </style>
 
 </head>
 
-<body style="margin:0;">
+<body>
 
-<!-- UI MENU -->
+<!-- TITLE -->
+<div id="title">🌕 Lunar Drift</div>
+
+<!-- MENU -->
 <div id="menu">
   <button onclick="toggleMenu()">☰ Data</button>
 
@@ -38,7 +76,19 @@
     <p onclick="selectData('global warming')">Global Warming</p>
     <p onclick="selectData('climate')">Climate</p>
     <p onclick="selectData('heatwaves')">Heatwaves</p>
+
+    <!-- NEW BUTTON -->
+    <hr>
+    <p onclick="toggleLayers()">🧱 Layers</p>
   </div>
+</div>
+
+<!-- LAYERS PANEL -->
+<div id="layersPanel">
+  <p onclick="showLayer('crust')">Crust</p>
+  <p onclick="showLayer('mantle')">Mantle</p>
+  <p onclick="showLayer('outer core')">Outer Core</p>
+  <p onclick="showLayer('inner core')">Inner Core</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -106,7 +156,8 @@ const glow = new THREE.Mesh(
   })
 );
 scene.add(glow);
-  // 🌊 FLOOD LAYER (blue)
+
+// 🌊 FLOOD LAYER
 const floodLayer = new THREE.Mesh(
   new THREE.SphereGeometry(1.05, 64, 64),
   new THREE.MeshBasicMaterial({
@@ -118,7 +169,7 @@ const floodLayer = new THREE.Mesh(
 floodLayer.visible = false;
 scene.add(floodLayer);
 
-// 🔥 HEATWAVE LAYER (orange)
+// 🔥 HEAT LAYER
 const heatLayer = new THREE.Mesh(
   new THREE.SphereGeometry(1.05, 64, 64),
   new THREE.MeshBasicMaterial({
@@ -130,14 +181,64 @@ const heatLayer = new THREE.Mesh(
 heatLayer.visible = false;
 scene.add(heatLayer);
 
+// 🧱 EARTH INTERNAL LAYERS
+const crust = new THREE.Mesh(
+  new THREE.SphereGeometry(1.02, 64, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+);
+const mantle = new THREE.Mesh(
+  new THREE.SphereGeometry(0.85, 64, 64),
+  new THREE.MeshBasicMaterial({ color: 0xff9933, wireframe: true })
+);
+const outerCore = new THREE.Mesh(
+  new THREE.SphereGeometry(0.6, 64, 64),
+  new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true })
+);
+const innerCore = new THREE.Mesh(
+  new THREE.SphereGeometry(0.3, 64, 64),
+  new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+);
+
+crust.visible = false;
+mantle.visible = false;
+outerCore.visible = false;
+innerCore.visible = false;
+
+scene.add(crust, mantle, outerCore, innerCore);
+
 // MENU FUNCTIONS
 function toggleMenu() {
   const menu = document.getElementById("dropdown");
   menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
 
+function toggleLayers() {
+  const panel = document.getElementById("layersPanel");
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+}
+
+// DATA SELECT
 function selectData(type) {
+  floodLayer.visible = false;
+  heatLayer.visible = false;
+
+  if (type === "flood") floodLayer.visible = true;
+  if (type === "heatwaves") heatLayer.visible = true;
+
   alert("Showing data for: " + type);
+}
+
+// LAYER SELECT
+function showLayer(type) {
+  crust.visible = false;
+  mantle.visible = false;
+  outerCore.visible = false;
+  innerCore.visible = false;
+
+  if (type === "crust") crust.visible = true;
+  if (type === "mantle") mantle.visible = true;
+  if (type === "outer core") outerCore.visible = true;
+  if (type === "inner core") innerCore.visible = true;
 }
 
 // ANIMATION
@@ -151,132 +252,6 @@ function animate() {
 }
 
 animate();
-</script>
-
-</body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Advanced Earth (WebGPU)</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
-
-  <!-- IMPORT MAP -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.webgpu.js",
-      "three/tsl": "https://unpkg.com/three@0.160.0/build/three.tsl.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
-</head>
-
-<body>
-
-<script type="module">
-
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { MeshStandardNodeMaterial, texture, uv } from 'three/tsl';
-
-// SCENE
-const scene = new THREE.Scene();
-
-// CAMERA
-const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(0, 0, 3);
-
-// RENDERER (WEBGPU)
-const renderer = new THREE.WebGPURenderer({ antialias: true });
-await renderer.init();
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
-
-// CONTROLS
-const controls = new OrbitControls(camera, renderer.domElement);
-
-// LIGHTS
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(5, 3, 5);
-scene.add(light);
-
-// TEXTURES
-const loader = new THREE.TextureLoader();
-
-const earthMap = loader.load(
-  'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
-);
-
-const nightMap = loader.load(
-  'https://threejs.org/examples/textures/planets/earth_at_night_2048.jpg'
-);
-
-// 🌍 MATERIAL USING TSL
-const material = new MeshStandardNodeMaterial();
-
-// DAY TEXTURE
-const day = texture(earthMap, uv());
-
-// NIGHT GLOW
-const night = texture(nightMap, uv());
-
-// MIX DAY + NIGHT
-material.colorNode = day.add(night.mul(0.3));
-
-// EARTH
-const earth = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 128, 128),
-  material
-);
-scene.add(earth);
-
-// 🌫️ ATMOSPHERE GLOW
-const atmosphere = new THREE.Mesh(
-  new THREE.SphereGeometry(1.1, 128, 128),
-  new THREE.MeshBasicMaterial({
-    color: 0x3399ff,
-    transparent: true,
-    opacity: 0.2
-  })
-);
-scene.add(atmosphere);
-
-// 🌌 STARS
-const starsGeometry = new THREE.BufferGeometry();
-const starsMaterial = new THREE.PointsMaterial();
-
-const vertices = [];
-for (let i = 0; i < 10000; i++) {
-  vertices.push(
-    (Math.random()-0.5)*2000,
-    (Math.random()-0.5)*2000,
-    (Math.random()-0.5)*2000
-  );
-}
-starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-scene.add(new THREE.Points(starsGeometry, starsMaterial));
-
-// ANIMATION
-function animate() {
-  earth.rotation.y += 0.002;
-  atmosphere.rotation.y += 0.002;
-
-  renderer.render(scene, camera);
-}
-
-renderer.setAnimationLoop(animate);
-
-// RESIZE
-window.addEventListener("resize", () => {
-  renderer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-});
-
 </script>
 
 </body>
