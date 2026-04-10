@@ -1,4 +1,137 @@
 <!DOCTYPE html>
+<html>
+<head>
+  <title>Earth</title>
+
+  <style>
+    #menu {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-family: Arial;
+    }
+
+    #dropdown {
+      display: none;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    #dropdown p {
+      cursor: pointer;
+      margin: 5px 0;
+    }
+  </style>
+
+</head>
+
+<body style="margin:0;">
+
+<!-- UI MENU -->
+<div id="menu">
+  <button onclick="toggleMenu()">☰ Data</button>
+
+  <div id="dropdown">
+    <p onclick="selectData('flood')">Flood</p>
+    <p onclick="selectData('global warming')">Global Warming</p>
+    <p onclick="selectData('climate')">Climate</p>
+    <p onclick="selectData('heatwaves')">Heatwaves</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// SCENE
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+// CAMERA
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.z = 3;
+
+// RENDERER
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// LIGHT
+const light = new THREE.PointLight(0xffffff, 2);
+light.position.set(5, 3, 5);
+scene.add(light);
+
+// TEXTURE LOADER
+const loader = new THREE.TextureLoader();
+
+// EARTH TEXTURE
+const earthTexture = loader.load(
+  'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
+);
+
+// EARTH
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 64, 64),
+  new THREE.MeshStandardMaterial({ map: earthTexture })
+);
+scene.add(earth);
+
+// CLOUDS
+const cloudTexture = loader.load(
+  'https://threejs.org/examples/textures/planets/earth_clouds_1024.png'
+);
+
+const clouds = new THREE.Mesh(
+  new THREE.SphereGeometry(1.01, 64, 64),
+  new THREE.MeshStandardMaterial({
+    map: cloudTexture,
+    transparent: true
+  })
+);
+scene.add(clouds);
+
+// GLOW
+const glow = new THREE.Mesh(
+  new THREE.SphereGeometry(1.1, 64, 64),
+  new THREE.MeshBasicMaterial({
+    color: 0x00aaff,
+    transparent: true,
+    opacity: 0.2
+  })
+);
+scene.add(glow);
+
+// MENU FUNCTIONS
+function toggleMenu() {
+  const menu = document.getElementById("dropdown");
+  menu.style.display = menu.style.display === "block" ? "none" : "block";
+}
+
+function selectData(type) {
+  alert("Showing data for: " + type);
+}
+
+// ANIMATION
+function animate() {
+  requestAnimationFrame(animate);
+
+  earth.rotation.y += 0.002;
+  clouds.rotation.y += 0.0025;
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+
+</body>
+</html><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
