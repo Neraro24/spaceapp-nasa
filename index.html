@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Unified NASA Space System</title>
+  <title>NASA Unified Space System FIXED</title>
 
   <style>
     body { margin:0; overflow:hidden; background:black; font-family:Arial; }
@@ -38,7 +38,7 @@
 
     #dropdown{
       display:none;
-      background:rgba(0,0,0,0.8);
+      background:rgba(0,0,0,0.85);
       padding:10px;
       border-radius:10px;
     }
@@ -63,7 +63,7 @@
 
 <div id="panel">
   <div id="mode">Mode: EARTH</div>
-  <div id="info">Click Earth</div>
+  <div id="info">Earth Active</div>
   <div id="mission">Mission: None</div>
 </div>
 
@@ -83,9 +83,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-// ================= STATE =================
-let mode="earth";
-
 // ================= SCENE =================
 const scene=new THREE.Scene();
 
@@ -97,17 +94,21 @@ renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // LIGHT
-scene.add(new THREE.DirectionalLight(0xffffff,1.5).position.set(5,5,5));
+const light=new THREE.DirectionalLight(0xffffff,1.5);
+light.position.set(5,5,5);
+scene.add(light);
 
-// ================= EARTH =================
+// ================= TEXTURE LOADER =================
 const loader=new THREE.TextureLoader();
 
+// ================= EARTH (FIXED POSITION) =================
 const earth=new THREE.Mesh(
   new THREE.SphereGeometry(1,128,128),
   new THREE.MeshStandardMaterial({
     map:loader.load("https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg")
   })
 );
+earth.position.set(0,0,0);
 scene.add(earth);
 
 // CLOUDS
@@ -120,33 +121,34 @@ const clouds=new THREE.Mesh(
 );
 scene.add(clouds);
 
+// ================= MOON (FIXED POSITION + SCALE) =================
+const moon=new THREE.Mesh(
+  new THREE.SphereGeometry(0.35,128,128),
+  new THREE.MeshStandardMaterial({
+    color:0x888888
+  })
+);
+moon.position.set(2.5,0,0);
+scene.add(moon);
+
 // ================= LAYERS =================
 function makeLayer(color){
-  const mesh=new THREE.Mesh(
+  const m=new THREE.Mesh(
     new THREE.SphereGeometry(1.02,128,128),
     new THREE.MeshBasicMaterial({
       color:color,
       transparent:true,
-      opacity:0.15,
-      blending:THREE.AdditiveBlending
+      opacity:0.15
     })
   );
-  mesh.visible=false;
-  scene.add(mesh);
-  return mesh;
+  m.visible=false;
+  scene.add(m);
+  return m;
 }
 
 const flood=makeLayer(0x00aaff);
 const heat=makeLayer(0xff3300);
 const quake=makeLayer(0xc49a6c);
-
-// ================= MOON =================
-const moon=new THREE.Mesh(
-  new THREE.SphereGeometry(3,128,128),
-  new THREE.MeshStandardMaterial({color:0x888888})
-);
-moon.visible=false;
-scene.add(moon);
 
 // ================= SHIPS =================
 const apollo=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.4,0.4),new THREE.MeshStandardMaterial({color:0x999999}));
@@ -154,7 +156,6 @@ const shuttle=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.8,8),new THREE.MeshSta
 const orion=new THREE.Mesh(new THREE.SphereGeometry(0.3,16,16),new THREE.MeshStandardMaterial({color:0xff3300}));
 
 apollo.visible=shuttle.visible=orion.visible=false;
-
 scene.add(apollo,shuttle,orion);
 
 // ================= MENU =================
@@ -165,7 +166,7 @@ function toggleMenu(){
 
 // ================= MODE SWITCH =================
 function switchToMoon(){
-  mode="moon";
+  document.getElementById("mode").innerText="Mode: MOON";
 
   earth.visible=false;
   clouds.visible=false;
@@ -179,20 +180,23 @@ function switchToMoon(){
   shuttle.position.set(-1,0,0);
   orion.position.set(0,0,-1);
 
-  document.getElementById("mode").innerText="Mode: MOON FPS";
+  camera.position.set(0,0.5,2.5);
+
   document.getElementById("crosshair").style.display="block";
 }
 
 function switchToEarth(){
-  mode="earth";
+  document.getElementById("mode").innerText="Mode: EARTH";
 
   earth.visible=true;
   clouds.visible=true;
 
-  moon.visible=false;
+  moon.visible=true;
+
   apollo.visible=shuttle.visible=orion.visible=false;
 
-  document.getElementById("mode").innerText="Mode: EARTH";
+  camera.position.set(0,0,3);
+
   document.getElementById("crosshair").style.display="none";
 }
 
@@ -205,44 +209,7 @@ function selectLayer(t){
   if(t==="quake") quake.visible=true;
 }
 
-// ================= RAYCAST =================
-const raycaster=new THREE.Raycaster();
-const mouse=new THREE.Vector2();
-
-window.addEventListener("mousemove",(e)=>{
-  mouse.x=(e.clientX/innerWidth)*2-1;
-  mouse.y=-(e.clientY/innerHeight)*2+1;
-});
-
-// ================= CLICK =================
-window.addEventListener("click",()=>{
-  raycaster.setFromCamera(mouse,camera);
-
-  if(mode==="earth"){
-    const hit=raycaster.intersectObject(earth);
-    if(hit.length){
-      document.getElementById("info").innerText="Earth Region Scanned";
-    }
-  }
-
-  if(mode==="moon"){
-    const hit=raycaster.intersectObjects([apollo,shuttle,orion]);
-
-    if(hit.length){
-      if(hit[0].object===apollo){
-        document.getElementById("mission").innerText="Apollo: Exploration Mode";
-      }
-      if(hit[0].object===shuttle){
-        document.getElementById("mission").innerText="Shuttle: Multiplayer Lobby";
-      }
-      if(hit[0].object===orion){
-        document.getElementById("mission").innerText="Orion: Alien Survival Mode";
-      }
-    }
-  }
-});
-
-// ================= LOOP =================
+// ================= RENDER LOOP =================
 function animate(){
   requestAnimationFrame(animate);
 
