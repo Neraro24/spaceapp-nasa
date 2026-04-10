@@ -1,19 +1,244 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Explorer</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <!-- Main container -->
-    <div id="main-container"></div>
+  <title>Climate Earth</title>
 
-    <!-- Age selection script -->
-    <script src="age-selection.js"></script>
-    <script>
-        // Initialize age selection script here
-    </script>
+  <style>
+    body { margin:0; overflow:hidden; background:black; font-family:Arial; }
+
+    #title{
+      position:absolute;
+      top:10px;
+      width:100%;
+      text-align:center;
+      color:white;
+      font-size:28px;
+      letter-spacing:2px;
+    }
+
+    #menu{
+      position:absolute;
+      top:20px;
+      right:20px;
+      color:white;
+    }
+
+    #dropdown{
+      display:none;
+      background:rgba(0,0,0,0.85);
+      padding:12px;
+      border-radius:10px;
+    }
+
+    #dropdown p{
+      cursor:pointer;
+      margin:6px 0;
+    }
+
+    #dataPanel{
+      position:absolute;
+      left:20px;
+      top:20px;
+      background:rgba(0,0,0,0.85);
+      padding:16px;
+      border-radius:12px;
+      color:white;
+      width:270px;
+      box-shadow:0 0 20px rgba(0,180,255,0.25);
+    }
+
+    #dataPanel h3{
+      margin-top:0;
+      color:#00ccff;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="title">🌍 Climate Earth</div>
+
+<div id="menu">
+  <button onclick="toggleMenu()">☰ Layers</button>
+  <div id="dropdown">
+    <p onclick="selectLayer('flood')">🌊 Floods</p>
+    <p onclick="selectLayer('heat')">🔥 Heatwaves</p>
+    <p onclick="selectLayer('quake')">🌎 Earthquakes</p>
+  </div>
+</div>
+
+<div id="dataPanel">
+  <h3>Live Climate Data</h3>
+  <p id="location">Location: --</p>
+  <p id="temp">Temp: --</p>
+  <p id="risk">Risk: --</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// ================= SCENE =================
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+camera.position.z = 3;
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// LIGHT
+const light = new THREE.PointLight(0xffffff,2);
+light.position.set(5,3,5);
+scene.add(light);
+
+// STARS
+const starGeo = new THREE.BufferGeometry();
+const starArr = [];
+for(let i=0;i<6000;i++){
+  starArr.push((Math.random()-0.5)*2000);
+  starArr.push((Math.random()-0.5)*2000);
+  starArr.push((Math.random()-0.5)*2000);
+}
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starArr,3));
+scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({size:1})));
+
+// ================= EARTH =================
+const loader = new THREE.TextureLoader();
+
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(1,128,128),
+  new THREE.MeshStandardMaterial({
+    map: loader.load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg')
+  })
+);
+scene.add(earth);
+
+// CLOUDS
+const clouds = new THREE.Mesh(
+  new THREE.SphereGeometry(1.01,128,128),
+  new THREE.MeshStandardMaterial({
+    map: loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
+    transparent:true
+  })
+);
+scene.add(clouds);
+
+// ================= CLIMATE LAYERS (FLAT STYLE) =================
+
+// 🌊 FLOOD LAYER (blue glow band)
+const floodLayer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.02,128,128),
+  new THREE.MeshBasicMaterial({
+    color:0x00aaff,
+    transparent:true,
+    opacity:0.18,
+    blending:THREE.AdditiveBlending,
+    side:THREE.DoubleSide
+  })
+);
+floodLayer.visible = false;
+scene.add(floodLayer);
+
+// 🔥 HEATWAVE LAYER (red gradient feel)
+const heatLayer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.02,128,128),
+  new THREE.MeshBasicMaterial({
+    color:0xff3b3b,
+    transparent:true,
+    opacity:0.16,
+    blending:THREE.AdditiveBlending,
+    side:THREE.DoubleSide
+  })
+);
+heatLayer.visible = false;
+scene.add(heatLayer);
+
+// 🌎 EARTHQUAKE LAYER (earth tone pulse)
+const quakeLayer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.02,128,128),
+  new THREE.MeshBasicMaterial({
+    color:0xc49a6c,
+    transparent:true,
+    opacity:0.15,
+    blending:THREE.AdditiveBlending,
+    side:THREE.DoubleSide
+  })
+);
+quakeLayer.visible = false;
+scene.add(quakeLayer);
+
+// ================= RAYCAST =================
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener("mousemove",(e)=>{
+  mouse.x = (e.clientX/innerWidth)*2-1;
+  mouse.y = -(e.clientY/innerHeight)*2+1;
+});
+
+// CLICK → LOCATION DATA
+window.addEventListener("click",()=>{
+  raycaster.setFromCamera(mouse,camera);
+  const hit = raycaster.intersectObject(earth);
+
+  if(hit.length>0){
+    const p = hit[0].point;
+
+    const lat = (Math.asin(p.y)).toFixed(2);
+    const lon = (Math.atan2(p.x,p.z)).toFixed(2);
+
+    showData(lat,lon);
+  }
+});
+
+// ================= DATA =================
+function showData(lat,lon){
+  document.getElementById("location").innerText = `Lat: ${lat}, Lon: ${lon}`;
+  document.getElementById("temp").innerText = `Temp: ${(15+Math.random()*25).toFixed(1)}°C`;
+  document.getElementById("risk").innerText =
+    ["Low","Medium","High"][Math.floor(Math.random()*3)];
+}
+
+// ================= MENU =================
+function toggleMenu(){
+  const d=document.getElementById("dropdown");
+  d.style.display=d.style.display==="block"?"none":"block";
+}
+
+function selectLayer(type){
+  floodLayer.visible=false;
+  heatLayer.visible=false;
+  quakeLayer.visible=false;
+
+  if(type==="flood") floodLayer.visible=true;
+  if(type==="heat") heatLayer.visible=true;
+  if(type==="quake") quakeLayer.visible=true;
+}
+
+// ================= SUBTLE ATMOSPHERIC PULSE =================
+function pulse(mesh,time,amp){
+  mesh.material.opacity = 0.12 + Math.sin(time)*amp;
+}
+
+// ================= ANIMATION =================
+function animate(){
+  requestAnimationFrame(animate);
+
+  earth.rotation.y += 0.002;
+  clouds.rotation.y += 0.0025;
+
+  const t = Date.now()*0.001;
+
+  if(floodLayer.visible) pulse(floodLayer,t,0.03);
+  if(heatLayer.visible) pulse(heatLayer,t*1.2,0.03);
+  if(quakeLayer.visible) pulse(quakeLayer,t*1.5,0.04);
+
+  renderer.render(scene,camera);
+}
+
+animate();
+</script>
+
 </body>
 </html>
