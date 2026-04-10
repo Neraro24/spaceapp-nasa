@@ -53,8 +53,40 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-animate();
+animate(clouds.rotation.y += 0.0025;);
+  <div id="menu">
+  <button onclick="toggleMenu()">☰ Data</button>
+
+  <div id="dropdown">
+    <p onclick="selectData('flood')">Flood</p>
+    <p onclick="selectData('global warming')">Global Warming</p>
+    <p onclick="selectData('climate')">Climate</p>
+    <p onclick="selectData('heatwaves')">Heatwaves</p>
+  </div>
+</div>6
 </script>
 
 </body>
 </html>
+const cloudTexture = textureLoader.load(
+  'https://threejs.org/examples/textures/planets/earth_clouds_1024.png'
+);
+
+const cloudGeometry = new THREE.SphereGeometry(1.01, 64, 64);
+const cloudMaterial = new THREE.MeshStandardMaterial({
+  map: cloudTexture,
+  transparent: true
+});
+
+const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+scene.add(clouds);
+const glowGeometry = new THREE.SphereGeometry(1.1, 64, 64);
+
+const glowMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00aaff,
+  transparent: true,
+  opacity: 0.2
+});
+
+const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+scene.add(glow);
