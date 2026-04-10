@@ -1,149 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Three.js WebGPU Earth</title>
+  <meta charset="UTF-8">
+  <title>Advanced Earth (WebGPU)</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; cursor: grab; }
-    canvas:active { cursor: grabbing; }
-    #info {
-      position: absolute;
-      top: 10px;
-      width: 100%;
-      text-align: center;
-      color: white;
-      font-family: Arial, sans-serif;
-      pointer-events: none;
-    }
+    body { margin: 0; overflow: hidden; }
   </style>
-</head>
-<body>
-<div id="info">Three.js Earth — click and drag to spin</div>
-<script type="importmap">{"imports": {"three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"}}</script>
-<script type="module">
-import * as THREE from 'three';
 
-let scene, camera, renderer, earth, atmosphere;
-
-let isDragging = false;
-let prevMouse = { x: 0, y: 0 };
-let velocity = { x: 0, y: 0 };
-
-async function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0, 3.5);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  document.body.appendChild(renderer.domElement);
-
-  // Stars
-  const starGeo = new THREE.BufferGeometry();
-  const starCount = 8000;
-  const positions = new Float32Array(starCount * 3);
-  for (let i = 0; i < starCount * 3; i++) positions[i] = (Math.random() - 0.5) * 200;
-  starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12 })));
-
-  // Lighting
-  scene.add(new THREE.AmbientLight(0x333355, 0.8));
-  const sun = new THREE.DirectionalLight(0xfff5e0, 2.0);
-  sun.position.set(5, 2, 5);
-  scene.add(sun);
-
-  // Textures
-  const loader = new THREE.TextureLoader();
-  const base = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/';
-  const [earthTex, bumpTex, specTex, cloudTex] = await Promise.all([
-    loader.loadAsync(base + 'earth_atmos_2048.jpg'),
-    loader.loadAsync(base + 'earth_normal_2048.jpg'),
-    loader.loadAsync(base + 'earth_specular_2048.jpg'),
-    loader.loadAsync(base + 'earth_clouds_2048.png'),
-  ]);
-
-  // Earth
-  earth = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 64, 64),
-    new THREE.MeshPhongMaterial({
-      map: earthTex, bumpMap: bumpTex, bumpScale: 0.08,
-      specularMap: specTex, specular: new THREE.Color(0x4488aa), shininess: 18,
-    })
-  );
-  scene.add(earth);
-
-  // Clouds
-  earth.add(new THREE.Mesh(
-    new THREE.SphereGeometry(1.012, 64, 64),
-    new THREE.MeshPhongMaterial({ map: cloudTex, transparent: true, opacity: 0.55, depthWrite: false })
-  ));
-
-  // Atmosphere glow
-  scene.add(new THREE.Mesh(
-    new THREE.SphereGeometry(1.08, 64, 64),
-    new THREE.MeshBasicMaterial({
-      color: 0x4488ff, transparent: true, opacity: 0.12,
-      blending: THREE.AdditiveBlending, side: THREE.BackSide, depthWrite: false,
-    })
-  ));
-
-  // Mouse drag
-  const canvas = renderer.domElement;
-  canvas.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    prevMouse = { x: e.clientX, y: e.clientY };
-    velocity = { x: 0, y: 0 };
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    velocity.x = (e.clientY - prevMouse.y) * 0.005;
-    velocity.y = (e.clientX - prevMouse.x) * 0.005;
-    earth.rotation.x += velocity.x;
-    earth.rotation.y += velocity.y;
-    prevMouse = { x: e.clientX, y: e.clientY };
-  });
-  window.addEventListener('mouseup', () => { isDragging = false; });
-
-  // Touch drag
-  canvas.addEventListener('touchstart', (e) => {
-    isDragging = true;
-    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    velocity = { x: 0, y: 0 };
-  });
-  window.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-    velocity.x = (e.touches[0].clientY - prevMouse.y) * 0.005;
-    velocity.y = (e.touches[0].clientX - prevMouse.x) * 0.005;
-    earth.rotation.x += velocity.x;
-    earth.rotation.y += velocity.y;
-    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  });
-  window.addEventListener('touchend', () => { isDragging = false; });
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  animate();
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-  if (!isDragging) {
-    earth.rotation.y += 0.0008;
-    velocity.x *= 0.95;
-    velocity.y *= 0.95;
-    earth.rotation.x += velocity.x;
-    earth.rotation.y += velocity.y;
+  <!-- IMPORT MAP -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.webgpu.js",
+      "three/tsl": "https://unpkg.com/three@0.160.0/build/three.tsl.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
   }
+  </script>
+</head>
+
+<body>
+
+<script type="module">
+
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MeshStandardNodeMaterial, texture, uv } from 'three/tsl';
+
+// SCENE
+const scene = new THREE.Scene();
+
+// CAMERA
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 100);
+camera.position.set(0, 0, 3);
+
+// RENDERER (WEBGPU)
+const renderer = new THREE.WebGPURenderer({ antialias: true });
+await renderer.init();
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// CONTROLS
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// LIGHTS
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(5, 3, 5);
+scene.add(light);
+
+// TEXTURES
+const loader = new THREE.TextureLoader();
+
+const earthMap = loader.load(
+  'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
+);
+
+const nightMap = loader.load(
+  'https://threejs.org/examples/textures/planets/earth_at_night_2048.jpg'
+);
+
+// 🌍 MATERIAL USING TSL
+const material = new MeshStandardNodeMaterial();
+
+// DAY TEXTURE
+const day = texture(earthMap, uv());
+
+// NIGHT GLOW
+const night = texture(nightMap, uv());
+
+// MIX DAY + NIGHT
+material.colorNode = day.add(night.mul(0.3));
+
+// EARTH
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 128, 128),
+  material
+);
+scene.add(earth);
+
+// 🌫️ ATMOSPHERE GLOW
+const atmosphere = new THREE.Mesh(
+  new THREE.SphereGeometry(1.1, 128, 128),
+  new THREE.MeshBasicMaterial({
+    color: 0x3399ff,
+    transparent: true,
+    opacity: 0.2
+  })
+);
+scene.add(atmosphere);
+
+// 🌌 STARS
+const starsGeometry = new THREE.BufferGeometry();
+const starsMaterial = new THREE.PointsMaterial();
+
+const vertices = [];
+for (let i = 0; i < 10000; i++) {
+  vertices.push(
+    (Math.random()-0.5)*2000,
+    (Math.random()-0.5)*2000,
+    (Math.random()-0.5)*2000
+  );
+}
+starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+scene.add(new THREE.Points(starsGeometry, starsMaterial));
+
+// ANIMATION
+function animate() {
+  earth.rotation.y += 0.002;
+  atmosphere.rotation.y += 0.002;
+
   renderer.render(scene, camera);
 }
 
-init().catch(console.error);
+renderer.setAnimationLoop(animate);
+
+// RESIZE
+window.addEventListener("resize", () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+});
+
 </script>
+
 </body>
 </html>
