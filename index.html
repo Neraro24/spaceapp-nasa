@@ -7,24 +7,21 @@
 
 <body>
 
-<div id="ui">
-  <div id="title">🚀 NASA Space Simulation</div>
+<div id="rightPanel">
+  <div class="panelTitle">LUNAR DRIFT DATA</div>
 
-  <div id="panel">
-    <div id="mode">Mode: EARTH</div>
-    <div id="info">Click to start</div>
-    <div id="mission">Mission: None</div>
+  <div class="item" onclick="setLayer('flood')">
+    🌊 Flood Prediction
   </div>
 
-  <div id="crosshair"></div>
+  <div class="item" onclick="setLayer('earthquake')">
+    🌎 Earthquake Prediction
+  </div>
+
+  <div class="item" onclick="setLayer('heat')">
+    🔥 Heatwave Prediction
+  </div>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-<script src="assets.js"></script>
-<script src="earth.js"></script>
-<script src="moon.js"></script>
-<script src="ai.js"></script>
 <script src="game.js"></script>
 
 </body>
