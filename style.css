@@ -41,3 +41,32 @@ body {
   border-radius:50%;
   transform:translate(-50%,-50%);
 }
+#rightPanel {
+  position:absolute;
+  right:20px;
+  top:20px;
+  width:240px;
+  padding:12px;
+  background:rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  border-radius:12px;
+  color:white;
+}
+
+.panelTitle {
+  font-size:14px;
+  opacity:0.8;
+  margin-bottom:10px;
+}
+
+.item {
+  padding:10px;
+  margin:6px 0;
+  background:rgba(255,255,255,0.05);
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.item:hover {
+  background:rgba(255,255,255,0.12);
+}
