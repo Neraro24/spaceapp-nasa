@@ -31,27 +31,6 @@
 
     #dropdown p { cursor:pointer; margin:5px 0; }
 
-    #layersPanel {
-      display:none;
-      position:absolute;
-      top:100px;
-      right:20px;
-      background:rgba(0,0,0,0.85);
-      padding:12px;
-      border-radius:10px;
-      width:220px;
-      color:white;
-    }
-
-    #tooltip {
-      position:absolute;
-      background:rgba(0,0,0,0.7);
-      color:white;
-      padding:5px;
-      border-radius:5px;
-      display:none;
-    }
-
     #dataPanel {
       position:absolute;
       left:20px;
@@ -60,7 +39,23 @@
       padding:12px;
       border-radius:10px;
       color:white;
-      width:200px;
+      width:240px;
+    }
+
+    #ai {
+      position:absolute;
+      bottom:20px;
+      left:20px;
+      width:260px;
+      background:rgba(0,0,0,0.85);
+      padding:10px;
+      border-radius:10px;
+      color:white;
+    }
+
+    #ai input {
+      width:100%;
+      margin-top:5px;
     }
   </style>
 </head>
@@ -74,162 +69,156 @@
   <div id="dropdown">
     <p onclick="selectData('flood')">Flood</p>
     <p onclick="selectData('heatwaves')">Heatwaves</p>
-    <hr>
-    <p onclick="toggleLayers()">🧱 Layers</p>
   </div>
 </div>
 
-<div id="layersPanel">
-  <p onclick="showLayer('crust')">Crust</p>
-  <p onclick="showLayer('mantle')">Mantle</p>
-  <p onclick="showLayer('outer core')">Outer Core</p>
-  <p onclick="showLayer('inner core')">Inner Core</p>
-</div>
-
-<div id="tooltip"></div>
-
 <div id="dataPanel">
-  <h3>🌍 Region Data</h3>
+  <h3>🌍 Live Data</h3>
+  <p id="country">Country: --</p>
   <p id="temp">Temp: --</p>
   <p id="risk">Risk: --</p>
+</div>
+
+<div id="ai">
+  🤖 AI Assistant  
+  <div id="chat"></div>
+  <input placeholder="Ask something..." onkeydown="askAI(event)">
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-// BASIC SETUP
+// ===== THREE SETUP =====
 const scene = new THREE.Scene();
+
+// STARS
+const starsGeo = new THREE.BufferGeometry();
+const starCount = 8000;
+const positions = [];
+for(let i=0;i<starCount;i++){
+  positions.push((Math.random()-0.5)*2000);
+  positions.push((Math.random()-0.5)*2000);
+  positions.push((Math.random()-0.5)*2000);
+}
+starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+const stars = new THREE.Points(starsGeo, new THREE.PointsMaterial({size:1}));
+scene.add(stars);
+
+// CAMERA
 const camera = new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
 camera.position.z = 3;
 
+// RENDERER
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// LIGHT
 const light = new THREE.PointLight(0xffffff,2);
 light.position.set(5,3,5);
 scene.add(light);
 
+// EARTH
 const loader = new THREE.TextureLoader();
 
-// EARTH
 const earth = new THREE.Mesh(
-  new THREE.SphereGeometry(1,64,64),
+  new THREE.SphereGeometry(1,128,128),
   new THREE.MeshStandardMaterial({
     map: loader.load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg')
   })
 );
 scene.add(earth);
 
-// CLOUDS
-const clouds = new THREE.Mesh(
-  new THREE.SphereGeometry(1.01,64,64),
-  new THREE.MeshStandardMaterial({
-    map: loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
-    transparent:true
+// ATMOSPHERE
+const glow = new THREE.Mesh(
+  new THREE.SphereGeometry(1.1,128,128),
+  new THREE.MeshBasicMaterial({
+    color:0x3399ff,
+    transparent:true,
+    opacity:0.2
   })
 );
-scene.add(clouds);
+scene.add(glow);
 
-// FLOOD
-const floodLayer = new THREE.Mesh(
-  new THREE.SphereGeometry(1.05,64,64),
-  new THREE.MeshBasicMaterial({color:0x00ccff,transparent:true,opacity:0.3})
-);
-floodLayer.visible=false;
-scene.add(floodLayer);
-
-// HEAT
-const heatLayer = new THREE.Mesh(
-  new THREE.SphereGeometry(1.05,64,64),
-  new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.3})
-);
-heatLayer.visible=false;
-scene.add(heatLayer);
-
-// RAYCASTER (CLICK + HOVER)
+// ===== RAYCAST =====
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+
+// CLICK → LAT LONG
+window.addEventListener("click",()=>{
+  raycaster.setFromCamera(mouse,camera);
+  const hit = raycaster.intersectObject(earth);
+
+  if(hit.length>0){
+    const p = hit[0].point;
+
+    const lat = Math.asin(p.y) * 180/Math.PI;
+    const lon = Math.atan2(p.x, p.z) * 180/Math.PI;
+
+    getWeather(lat,lon);
+  }
+});
 
 window.addEventListener("mousemove",(e)=>{
   mouse.x = (e.clientX/innerWidth)*2-1;
   mouse.y = -(e.clientY/innerHeight)*2+1;
-
-  raycaster.setFromCamera(mouse,camera);
-  const intersects = raycaster.intersectObject(earth);
-
-  const tooltip = document.getElementById("tooltip");
-
-  if(intersects.length>0){
-    tooltip.style.display="block";
-    tooltip.style.left = e.clientX+"px";
-    tooltip.style.top = e.clientY+"px";
-    tooltip.innerHTML="🌍 Earth Surface";
-  } else {
-    tooltip.style.display="none";
-  }
 });
 
-// CLICK → ZOOM + DATA
-window.addEventListener("click",()=>{
-  raycaster.setFromCamera(mouse,camera);
-  const intersects = raycaster.intersectObject(earth);
+// ===== REAL API =====
+async function getWeather(lat,lon){
+  const API_KEY = "YOUR_API_KEY_HERE";
 
-  if(intersects.length>0){
-    zoomToEarth();
-    showFakeData();
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+
+    document.getElementById("country").innerText = "Location: " + data.name;
+    document.getElementById("temp").innerText = "Temp: " + data.main.temp + "°C";
+
+    let risk = "Low";
+    if(data.main.temp > 35) risk = "High";
+    else if(data.main.temp > 28) risk = "Medium";
+
+    document.getElementById("risk").innerText = "Risk: " + risk;
+
+  }catch(e){
+    console.log(e);
   }
-});
-
-// CAMERA ZOOM
-function zoomToEarth(){
-  let target = 1.5;
-  let interval = setInterval(()=>{
-    camera.position.z -= 0.05;
-    if(camera.position.z <= target) clearInterval(interval);
-  },16);
 }
 
-// FAKE DATA
-function showFakeData(){
-  document.getElementById("temp").innerText = "Temp: " + (30+Math.random()*10).toFixed(1)+"°C";
-  document.getElementById("risk").innerText = "Risk: " + ["Low","Medium","High"][Math.floor(Math.random()*3)];
+// ===== AI ASSISTANT =====
+function askAI(e){
+  if(e.key==="Enter"){
+    const input = e.target.value;
+    const chat = document.getElementById("chat");
+
+    let reply = "I can help with climate, Earth layers, and weather.";
+
+    if(input.includes("flood")) reply="Floods are caused by excess rainfall or sea rise.";
+    if(input.includes("heat")) reply="Heatwaves occur due to trapped atmospheric heat.";
+    if(input.includes("earth")) reply="Earth has crust, mantle, outer core, inner core.";
+
+    chat.innerHTML += "<p>🧑 "+input+"</p>";
+    chat.innerHTML += "<p>🤖 "+reply+"</p>";
+
+    e.target.value="";
+  }
 }
 
-// MENU
+// ===== MENU =====
 function toggleMenu(){
   const m = document.getElementById("dropdown");
   m.style.display = m.style.display==="block"?"none":"block";
 }
 
-function toggleLayers(){
-  const p = document.getElementById("layersPanel");
-  p.style.display = p.style.display==="block"?"none":"block";
-}
-
-function selectData(type){
-  floodLayer.visible=false;
-  heatLayer.visible=false;
-
-  if(type==="flood") floodLayer.visible=true;
-  if(type==="heatwaves") heatLayer.visible=true;
-}
-
-// ANIMATION
+// ===== ANIMATION =====
 function animate(){
   requestAnimationFrame(animate);
 
   earth.rotation.y += 0.002;
-  clouds.rotation.y += 0.0025;
-
-  // animate layers
-  if(floodLayer.visible){
-    floodLayer.material.opacity = 0.2 + Math.sin(Date.now()*0.003)*0.1;
-  }
-
-  if(heatLayer.visible){
-    heatLayer.material.opacity = 0.2 + Math.sin(Date.now()*0.005)*0.15;
-  }
+  glow.rotation.y += 0.002;
 
   renderer.render(scene,camera);
 }
