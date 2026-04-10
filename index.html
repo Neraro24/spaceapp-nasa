@@ -106,6 +106,29 @@ const glow = new THREE.Mesh(
   })
 );
 scene.add(glow);
+  // 🌊 FLOOD LAYER (blue)
+const floodLayer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.05, 64, 64),
+  new THREE.MeshBasicMaterial({
+    color: 0x00ccff,
+    transparent: true,
+    opacity: 0.3
+  })
+);
+floodLayer.visible = false;
+scene.add(floodLayer);
+
+// 🔥 HEATWAVE LAYER (orange)
+const heatLayer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.05, 64, 64),
+  new THREE.MeshBasicMaterial({
+    color: 0xff6600,
+    transparent: true,
+    opacity: 0.3
+  })
+);
+heatLayer.visible = false;
+scene.add(heatLayer);
 
 // MENU FUNCTIONS
 function toggleMenu() {
