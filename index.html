@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Earth</title>
+  <title>Earth Data Visualization</title>
 
   <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: black;
+    }
+
     #menu {
       position: absolute;
       top: 20px;
       right: 20px;
       color: white;
       font-family: Arial;
+      z-index: 10;
     }
 
     #dropdown {
@@ -24,18 +31,15 @@
       margin: 5px 0;
     }
   </style>
-
 </head>
 
-<body style="margin:0;">
+<body>
 
-<!-- UI MENU -->
+<!-- MENU -->
 <div id="menu">
   <button onclick="toggleMenu()">☰ Data</button>
-
   <div id="dropdown">
     <p onclick="selectData('flood')">Flood</p>
-    <p onclick="selectData('global warming')">Global Warming</p>
     <p onclick="selectData('climate')">Climate</p>
     <p onclick="selectData('heatwaves')">Heatwaves</p>
   </div>
@@ -46,7 +50,6 @@
 <script>
 // SCENE
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
 
 // CAMERA
 const camera = new THREE.PerspectiveCamera(
@@ -58,8 +61,10 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.z = 3;
 
 // RENDERER
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.domElement.style.position = "absolute";
+renderer.domElement.style.zIndex = "1";
 document.body.appendChild(renderer.domElement);
 
 // LIGHT
@@ -67,12 +72,15 @@ const light = new THREE.PointLight(0xffffff, 2);
 light.position.set(5, 3, 5);
 scene.add(light);
 
-// TEXTURE LOADER
+// TEXTURES
 const loader = new THREE.TextureLoader();
 
-// EARTH TEXTURE
 const earthTexture = loader.load(
   'https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg'
+);
+
+const cloudTexture = loader.load(
+  'https://threejs.org/examples/textures/planets/earth_clouds_1024.png'
 );
 
 // EARTH
@@ -83,10 +91,6 @@ const earth = new THREE.Mesh(
 scene.add(earth);
 
 // CLOUDS
-const cloudTexture = loader.load(
-  'https://threejs.org/examples/textures/planets/earth_clouds_1024.png'
-);
-
 const clouds = new THREE.Mesh(
   new THREE.SphereGeometry(1.01, 64, 64),
   new THREE.MeshStandardMaterial({
@@ -107,14 +111,85 @@ const glow = new THREE.Mesh(
 );
 scene.add(glow);
 
-// MENU FUNCTIONS
+// 🌌 STARS BACKGROUND
+const starsGeometry = new THREE.BufferGeometry();
+const starsMaterial = new THREE.PointsMaterial();
+
+const starsVertices = [];
+for (let i = 0; i < 10000; i++) {
+  starsVertices.push(
+    (Math.random() - 0.5) * 2000,
+    (Math.random() - 0.5) * 2000,
+    (Math.random() - 0.5) * 2000
+  );
+}
+
+starsGeometry.setAttribute(
+  'position',
+  new THREE.Float32BufferAttribute(starsVertices, 3)
+);
+
+const starField = new THREE.Points(starsGeometry, starsMaterial);
+scene.add(starField);
+
+// 📍 ADD MARKER FUNCTION
+function addMarker(lat, lon, color) {
+  const radius = 1;
+
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+
+  const x = -(radius * Math.sin(phi) * Math.cos(theta));
+  const z = (radius * Math.sin(phi) * Math.sin(theta));
+  const y = (radius * Math.cos(phi));
+
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.02, 16, 16),
+    new THREE.MeshBasicMaterial({ color })
+  );
+
+  marker.position.set(x, y, z);
+  scene.add(marker);
+}
+
+// 🧹 CLEAR OLD MARKERS
+function clearMarkers() {
+  scene.children = scene.children.filter(obj => {
+    if (obj.geometry && obj.geometry.type === "SphereGeometry" && obj.scale.x === 1) {
+      return true; // keep earth
+    }
+    if (obj.geometry && obj.geometry.parameters && obj.geometry.parameters.radius === 0.02) {
+      scene.remove(obj);
+      return false;
+    }
+    return true;
+  });
+}
+
+// MENU
 function toggleMenu() {
   const menu = document.getElementById("dropdown");
   menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
 
+// DATA SELECTION
 function selectData(type) {
-  alert("Showing data for: " + type);
+  clearMarkers();
+
+  if (type === "flood") {
+    addMarker(20, 80, 0x0000ff);   // India
+    addMarker(30, 90, 0x0000ff);   // Bangladesh
+  }
+
+  if (type === "climate") {
+    addMarker(28.6, 77.2, 0xff0000); // Delhi
+    addMarker(40.7, -74, 0xff0000);  // USA
+  }
+
+  if (type === "heatwaves") {
+    addMarker(25, 45, 0xff9900);  // Middle East
+    addMarker(35, 139, 0xff9900); // Japan
+  }
 }
 
 // ANIMATION
@@ -128,6 +203,13 @@ function animate() {
 }
 
 animate();
+
+// RESIZE FIX
+window.addEventListener("resize", () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
 </script>
 
 </body>
