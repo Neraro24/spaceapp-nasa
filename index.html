@@ -32,7 +32,6 @@
 
     #dropdown p { cursor:pointer; margin:6px 0; }
 
-    /* BIGGER DATA PANEL */
     #dataPanel {
       position:absolute;
       left:20px;
@@ -45,11 +44,7 @@
       box-shadow:0 0 15px rgba(0,150,255,0.3);
     }
 
-    #dataPanel h3 {
-      margin-top:0;
-      color:#00ccff;
-    }
-
+    #dataPanel h3 { margin-top:0; color:#00ccff; }
   </style>
 </head>
 
@@ -62,6 +57,7 @@
   <div id="dropdown">
     <p onclick="selectData('flood')">Flood</p>
     <p onclick="selectData('heatwaves')">Heatwaves</p>
+    <p onclick="selectData('earthquakes')">Earthquakes</p>
   </div>
 </div>
 
@@ -105,6 +101,7 @@ scene.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({size:1})));
 
 // EARTH
 const loader = new THREE.TextureLoader();
+
 const earth = new THREE.Mesh(
   new THREE.SphereGeometry(1,128,128),
   new THREE.MeshStandardMaterial({
@@ -123,28 +120,47 @@ const clouds = new THREE.Mesh(
 );
 scene.add(clouds);
 
-// 🌊 FLOOD WAVE (THIN + SMOOTH)
+// ===============================
+// 🌊 FLOOD LAYER (BLUE WAVE)
+// ===============================
 const floodGeo = new THREE.SphereGeometry(1.03,128,128);
 const floodMat = new THREE.MeshBasicMaterial({
-  color:0x00ccff,
+  color:0x00aaff,
   transparent:true,
-  opacity:0.4,
-  wireframe:false
+  opacity:0.25,
+  side:THREE.DoubleSide
 });
 const floodLayer = new THREE.Mesh(floodGeo,floodMat);
 floodLayer.visible = false;
 scene.add(floodLayer);
 
-// 🔥 HEAT WAVE
+// ===============================
+// 🔥 HEATWAVE LAYER (RED WAVE)
+// ===============================
 const heatGeo = new THREE.SphereGeometry(1.03,128,128);
 const heatMat = new THREE.MeshBasicMaterial({
-  color:0xff6600,
+  color:0xff3b3b,
   transparent:true,
-  opacity:0.4
+  opacity:0.25,
+  side:THREE.DoubleSide
 });
 const heatLayer = new THREE.Mesh(heatGeo,heatMat);
 heatLayer.visible = false;
 scene.add(heatLayer);
+
+// ===============================
+// 🌎 EARTHQUAKE LAYER (BROWN WAVE)
+// ===============================
+const quakeGeo = new THREE.SphereGeometry(1.03,128,128);
+const quakeMat = new THREE.MeshBasicMaterial({
+  color:0xc49a6c,
+  transparent:true,
+  opacity:0.25,
+  side:THREE.DoubleSide
+});
+const quakeLayer = new THREE.Mesh(quakeGeo,quakeMat);
+quakeLayer.visible = false;
+scene.add(quakeLayer);
 
 // ===== RAYCAST =====
 const raycaster = new THREE.Raycaster();
@@ -170,11 +186,12 @@ window.addEventListener("click",()=>{
   }
 });
 
-// FAKE/REAL DATA
+// FAKE DATA PANEL
 function showData(lat,lon){
   document.getElementById("location").innerText = `Lat: ${lat}, Lon: ${lon}`;
-  document.getElementById("temp").innerText = `Temp: ${(25+Math.random()*15).toFixed(1)}°C`;
-  document.getElementById("risk").innerText = `Risk: ${["Low","Medium","High"][Math.floor(Math.random()*3)]}`;
+  document.getElementById("temp").innerText = `Temp: ${(20+Math.random()*20).toFixed(1)}°C`;
+  document.getElementById("risk").innerText =
+    ["Low","Medium","High"][Math.floor(Math.random()*3)];
 }
 
 // MENU
@@ -186,12 +203,14 @@ function toggleMenu(){
 function selectData(type){
   floodLayer.visible=false;
   heatLayer.visible=false;
+  quakeLayer.visible=false;
 
   if(type==="flood") floodLayer.visible=true;
   if(type==="heatwaves") heatLayer.visible=true;
+  if(type==="earthquakes") quakeLayer.visible=true;
 }
 
-// 🌊 SMOOTH WAVE FUNCTION (NO DISTORT BREAKING)
+// 🌊 WAVE EFFECT (SMOOTH PULSE DISTORTION)
 function animateWave(mesh,time){
   const pos = mesh.geometry.attributes.position;
 
@@ -200,25 +219,31 @@ function animateWave(mesh,time){
     const y = pos.getY(i);
     const z = pos.getZ(i);
 
-    const wave = Math.sin(time + x*3 + y*3 + z*3)*0.01;
+    const wave =
+      Math.sin(time + x*5) * 0.008 +
+      Math.cos(time + y*5) * 0.008 +
+      Math.sin(time + z*5) * 0.008;
 
-    pos.setXYZ(i, x*(1+wave), y*(1+wave), z*(1+wave));
+    const scale = 1 + wave;
+
+    pos.setXYZ(i, x*scale, y*scale, z*scale);
   }
 
   pos.needsUpdate = true;
 }
 
-// ANIMATION
+// ===== ANIMATION =====
 function animate(){
   requestAnimationFrame(animate);
 
   earth.rotation.y += 0.002;
   clouds.rotation.y += 0.0025;
 
-  const t = Date.now()*0.002;
+  const t = Date.now()*0.0015;
 
   if(floodLayer.visible) animateWave(floodLayer,t);
-  if(heatLayer.visible) animateWave(heatLayer,t*1.5);
+  if(heatLayer.visible) animateWave(heatLayer,t*1.2);
+  if(quakeLayer.visible) animateWave(quakeLayer,t*1.5);
 
   renderer.render(scene,camera);
 }
